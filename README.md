@@ -61,3 +61,109 @@ cat signer.json
 # bu komut ile private keyinizi yedekleyebilirsiniz.
 ```
 
+## Buradan sonra website işlemlerine geçiyoruz.
+
+##### certbot yüklüyoruz
+
+```bash
+sudo apt update
+sudo apt install -y certbot nginx
+```
+
+##### Ayarlar
+
+```bash
+sudo certbot certonly --manual --preferred-challenges dns \
+--email <your-email-address> \
+-d <your-domain.abc>
+```
+
+#Bu kodu giriyoruz ve aşağıdaki kodları içerisine yapıştırıyoruz. Aşağıdaki kodda yazan your-domain kısımlarını düzenliyoruz. <> bu kısımları da silmeniz gerek. `sudo nano /etc/nginx/sites-available/default`
+
+```conf
+# Force redirects from HTTP to HTTPS
+server {
+    listen 80;
+    listen [::]:80;
+    server_name <your-domain.abc>;
+
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+# Forward traffic to your node and provide SSL certificates
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    server_name <your-domain.abc>;
+
+    ssl_certificate /etc/letsencrypt/live/<your-domain.abc>/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/<your-domain.abc>/privkey.pem;
+
+    location / {
+        proxy_pass http://localhost:8080; # or your port you changed at 6.
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_http_version 1.1;
+    }
+}
+```
+
+Kayıt ediyoruz ve çıkıyoruz.
+
+Onaylayıp yeniden balatırıyoruz Nginx'i.
+
+```bash
+sudo nginx -t
+```
+
+And restart nginx
+
+```bash
+sudo service nginx restart
+```
+
+
+#### 7.2 Cloudflare ayarlama
+
+Cloudflare DNS service bölümüne giriyoruz, add A record your domain to IP **WITH proxy**.
+
+![proxy on](./images//proxy-on.png)
+
+şimdi **Rules** > **Origin Rules** bölümüne gidiyoruz.
+
+ `+ Create rule` tıklıyoruz, `Rule name (required)` bir isim belirliyoruz ve field'e `Hostname` seçiyoruz yanına da domaininizi ekliyoruz.
+
+ve `Rewrite to...` port numaranızı yazıyoruz. (8080)
+
+<img src="./images//proxy-port.png" width="480" alt="proxy port" />
+
+
+`deploy` diyoruz.
+
+
+### 8. Sonra stake ettiğiniz tokenleri web sitenize girdiğinizde aşağıdaki şekilde görüyorsunuz.
+
+
+```json
+{
+  "Address": "<address>",
+  "Gateway": {
+    "URL": "https://arweave.net"
+  },
+  "Name": "Edge",
+  "Version": "0.0.4"
+}
+```
+
+Stake işlemi aşağıdaki şekilde olmalıdır.
+
+```
+sudo docker run -v liteseed:/data edge stake -u $DOMAIN
+```
+
+## Etiket
+
+`ar`, `liteseed`, `docker`, `go`, `domain`
